@@ -14,24 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#include "chre/platform/memory_manager.h"
+
+#include <cstdlib>
 
 #include "RTOS.h"
 
 namespace chre {
 
-/**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
- */
+void *MemoryManager::doAlloc(Nanoapp * /* app */, uint32_t bytes) {
+  return OS_malloc(bytes);
+}
 
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+void MemoryManager::doFree(Nanoapp * /* app */, void *ptr) {
+  OS_free(ptr);
+}
 
 }  // namespace chre
-
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_

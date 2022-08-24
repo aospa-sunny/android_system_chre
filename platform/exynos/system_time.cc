@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-
-#include "RTOS.h"
+#include "chre/platform/system_time.h"
+#include "system_Device.h"
 
 namespace chre {
 
-/**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
- */
-
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+Nanoseconds SystemTime::getMonotonicTime() {
+  return Nanoseconds(getTimeStampNS());
+}
 
 }  // namespace chre
-
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
