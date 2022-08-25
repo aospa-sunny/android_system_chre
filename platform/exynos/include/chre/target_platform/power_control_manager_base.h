@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-
-#include "RTOS.h"
+#ifndef CHRE_PLATFORM_EXYNOS_POWER_CONTROL_MANAGER_BASE_H_
+#define CHRE_PLATFORM_EXYNOS_POWER_CONTROL_MANAGER_BASE_H_
 
 namespace chre {
 
 /**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
+ * @brief Platform specific power control manager.
  */
-
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+class PowerControlManagerBase {};
 
 }  // namespace chre
 
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#endif  // CHRE_PLATFORM_EXYNOS_POWER_CONTROL_MANAGER_BASE_H_

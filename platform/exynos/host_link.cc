@@ -14,24 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-
-#include "RTOS.h"
+#include "chre/platform/host_link.h"
 
 namespace chre {
 
-/**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
- */
-
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+void sendDebugDumpResultToHost(uint16_t /*hostClientId*/,
+                               const char * /*debugStr*/,
+                               size_t /*debugStrSize*/, bool /*complete*/,
+                               uint32_t /*dataCount*/) {
+  // TODO(b/230134803): Implement this.
+}
 
 }  // namespace chre
-
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_

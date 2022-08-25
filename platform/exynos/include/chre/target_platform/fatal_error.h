@@ -13,25 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef CHRE_PLATFORM_EXYNOS_FATAL_ERROR_H_
+#define CHRE_PLATFORM_EXYNOS_FATAL_ERROR_H_
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#include "csp_assert.h"
 
-#include "RTOS.h"
+#define FATAL_ERROR_QUIT() CSP_PANIC(0)
 
-namespace chre {
-
-/**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
- */
-
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
-
-}  // namespace chre
-
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#endif  // CHRE_PLATFORM_EXYNOS_FATAL_ERROR_H_

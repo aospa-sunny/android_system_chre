@@ -14,24 +14,33 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#ifndef CHRE_PLATFORM_EMBOS_MEMORY_H_
+#define CHRE_PLATFORM_EMBOS_MEMORY_H_
+
+#include <cstddef>
+
+#include "chre/platform/shared/memory.h"
 
 #include "RTOS.h"
 
 namespace chre {
 
 /**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
+ * Since there's no DRAM on the platform currently, this API is remapped to
+ * chre::memoryAlloc.
  */
+void *memoryAllocDram(size_t size) {
+  return memoryAlloc(size);
+}
 
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+/**
+ * Free memory allocated via the memoryAllocDram method. Since there's no DRAM
+ * on the platform, this API is remapped to chre::memoryFree.
+ */
+void memoryFreeDram(void *pointer) {
+  memoryFree(pointer);
+}
 
 }  // namespace chre
 
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#endif  // CHRE_PLATFORM_EMBOS_MEMORY_H_

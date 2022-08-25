@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
-#define CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
+#include "chre/platform/context.h"
+#include "chre/embos/init.h"
+
+#include <string.h>
 
 #include "RTOS.h"
 
 namespace chre {
 
-/**
- * The EmbOS implementation of ConditionVariableBase.
- *
- * Note that this implementation is aimed at EmbOS v4.22.
- */
+bool inEventLoopThread() {
+  bool rv = false;
 
-class ConditionVariableBase {
- protected:
-  OS_CSEMA mCvSemaphore;
-};
+  OS_TASK *currentTask = OS_GetTaskID();
+  if (currentTask != nullptr) {
+    // Some task is executing or the scheduler has started.
+    const char *currentTaskName = OS_GetTaskName(currentTask);
+    if (currentTaskName != nullptr) {
+      // Current task has a name.
+      rv = strncmp(getChreTaskName(), currentTaskName, getChreTaskNameLen()) ==
+           0;
+    }
+  }
+
+  return rv;
+}
 
 }  // namespace chre
-
-#endif  // CHRE_PLATFORM_EMBOS_CONDITION_VARIABLE_BASE_H_
