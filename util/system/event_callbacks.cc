@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-#include "qsh_daemon.h"
+#include "chre/util/system/event_callbacks.h"
 
-int main() {
-  android::chre::QshChreDaemon daemon;
+#include "chre/platform/memory.h"
 
-  if (!daemon.init()) {
-    LOGE("failed to init the daemon");
-  } else {
-    daemon.run();
-  }
+namespace chre {
 
-  return 0;
+void freeEventDataCallback(uint16_t /*eventType*/, void *eventData) {
+  memoryFree(eventData);
 }
+
+}  // namespace chre

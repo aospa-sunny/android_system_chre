@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_QSH_NANOAPP_CLIENT_H_
-#define CHRE_QSH_NANOAPP_CLIENT_H_
+#ifndef CHRE_CORE_EVENT_HELPERS_H_
+#define CHRE_CORE_EVENT_HELPERS_H_
 
-#include "qmi_client_base.h"
+#include <cstdint>
 
-namespace android {
 namespace chre {
 
-class QmiQshNanoappClient : public QmiClientBase {
- public:
-  static constexpr char kSensorType[] = "chre_qsh_nanoapp";
-
-  QmiQshNanoappClient() : QmiClientBase(kSensorType) {}
-
-  void onAttrEventDecodeComplete() override;
-  void onSuidDecodeEventComplete() override;
-};
+/**
+ * Generic event free callback that can be used by any event where the event
+ * data is allocated via memoryAlloc, and no special processing is needed in the
+ * event complete callback other than freeing the event data.
+ */
+void freeEventDataCallback(uint16_t eventType, void *eventData);
 
 }  // namespace chre
-}  // namespace android
 
-#endif  // CHRE_QSH_NANOAPP_CLIENT_H_
+#endif  // CHRE_CORE_EVENT_HELPERS_H_
