@@ -18,6 +18,7 @@
 #include <fstream>
 
 #include "chre_host/daemon_base.h"
+#include "chre_host/file_stream.h"
 #include "chre_host/log.h"
 #include "chre_host/napp_header.h"
 
@@ -79,7 +80,7 @@ void ChreDaemonBase::loadPreloadedNanoapp(const std::string &directory,
   // within the directory its own binary resides in.
   std::string nanoappFilename = name + ".so";
 
-  if (readFileContents(headerFile.c_str(), &headerBuffer) &&
+  if (!readFileContents(headerFile.c_str(), &headerBuffer) ||
       !loadNanoapp(headerBuffer, nanoappFilename, transactionId)) {
     LOGE("Failed to load nanoapp: '%s'", name.c_str());
   }
@@ -117,28 +118,6 @@ bool ChreDaemonBase::sendTimeSyncWithRetry(size_t numRetries,
       usleep(retryDelayUs);
     }
   }
-  return success;
-}
-
-bool ChreDaemonBase::readFileContents(const char *filename,
-                                      std::vector<uint8_t> *buffer) {
-  bool success = false;
-  std::ifstream file(filename, std::ios::binary | std::ios::ate);
-  if (!file) {
-    LOGE("Couldn't open file '%s': %d (%s)", filename, errno, strerror(errno));
-  } else {
-    ssize_t size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    buffer->resize(size);
-    if (!file.read(reinterpret_cast<char *>(buffer->data()), size)) {
-      LOGE("Couldn't read from file '%s': %d (%s)", filename, errno,
-           strerror(errno));
-    } else {
-      success = true;
-    }
-  }
-
   return success;
 }
 

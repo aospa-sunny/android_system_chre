@@ -92,7 +92,7 @@ uint32_t chrePalBleGetCapabilities() {
 
 uint32_t chrePalBleGetFilterCapabilities() {
   return CHRE_BLE_FILTER_CAPABILITIES_RSSI |
-         CHRE_BLE_FILTER_CAPABILITIES_SERVICE_DATA_UUID;
+         CHRE_BLE_FILTER_CAPABILITIES_SERVICE_DATA;
 }
 
 bool chrePalBleStartScan(chreBleScanMode mode, uint32_t /* reportDelayMs */,
@@ -114,9 +114,10 @@ bool chrePalBleStopScan() {
 void chrePalBleReleaseAdvertisingEvent(
     struct chreBleAdvertisementEvent *event) {
   for (size_t i = 0; i < event->numReports; i++) {
-    chre::memoryFree(
-        const_cast<chreBleAdvertisingReport *>(&(event->reports[i])));
+    auto report = const_cast<chreBleAdvertisingReport *>(&(event->reports[i]));
+    chre::memoryFree(const_cast<uint8_t *>(report->data));
   }
+  chre::memoryFree(const_cast<chreBleAdvertisingReport *>(event->reports));
   chre::memoryFree(event);
 }
 

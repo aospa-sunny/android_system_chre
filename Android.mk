@@ -63,6 +63,7 @@ MSM_INCLUDES := \
 
 LOCAL_SRC_FILES := \
     host/common/daemon_base.cc \
+    host/common/file_stream.cc \
     host/common/fragmented_load_transaction.cc \
     host/common/host_protocol_host.cc \
     host/common/log_message_parser.cc \
@@ -105,6 +106,7 @@ LOCAL_CFLAGS += -Wno-c++11-narrowing
 LOCAL_CFLAGS += -Wno-deprecated-volatile
 PIGWEED_DIR = external/pigweed
 PIGWEED_DIR_RELPATH = ../../$(PIGWEED_DIR)
+LOCAL_CFLAGS += -I$(PIGWEED_DIR)/pw_bytes/public
 LOCAL_CFLAGS += -I$(PIGWEED_DIR)/pw_polyfill/public
 LOCAL_CFLAGS += -I$(PIGWEED_DIR)/pw_polyfill/public_overrides
 LOCAL_CFLAGS += -I$(PIGWEED_DIR)/pw_polyfill/standard_library_public

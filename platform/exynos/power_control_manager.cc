@@ -14,28 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_PLATFORM_EMBOS_INIT_H_
-#define CHRE_PLATFORM_EMBOS_INIT_H_
+#include "chre/platform/power_control_manager.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace chre {
 
-/**
- * The init function spawns an EmbOS task that initializes the CHRE core,
- * loads any static nanoapps, and starts the CHRE event loop.
- * Note that this function should be called before starting the EmbOS
- * scheduler via OS_START.
- */
-void chreEmbosInit();
+void PowerControlManager::preEventLoopProcess(size_t /* numPendingEvents */) {}
 
-/**
- * Stops the CHRE event loop, and cleans up the CHRE EmbOS task.
- */
-void chreEmbosDeinit();
+void PowerControlManager::postEventLoopProcess(size_t /* numPendingEvents */) {}
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
+bool PowerControlManager::hostIsAwake() {
+  return true;
+}
 
-#endif  // CHRE_PLATFORM_EMBOS_INIT_H_
+}  // namespace chre

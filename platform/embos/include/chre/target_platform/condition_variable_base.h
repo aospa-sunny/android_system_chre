@@ -21,9 +21,15 @@
 
 namespace chre {
 
+/**
+ * The EmbOS implementation of ConditionVariableBase.
+ *
+ * Note that this implementation is aimed at EmbOS v4.22.
+ */
+
 class ConditionVariableBase {
  protected:
-  OS_SEMAPHORE mCvSemaphore;
+  OS_CSEMA mCvSemaphore;
 };
 
 }  // namespace chre
