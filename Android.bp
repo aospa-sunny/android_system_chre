@@ -113,6 +113,7 @@ cc_binary {
     vendor: true,
     local_include_dirs: [
         "host/common/include",
+        "chre_api/include",
     ],
     srcs: [
         "host/common/file_stream.cc",
@@ -125,7 +126,7 @@ cc_binary {
         "liblog",
         "libutils",
     ],
-    cflags: ["-Wall", "-Werror"],
+    cflags: ["-Wall", "-Werror", "-fexceptions"],
 }
 
 cc_test {
@@ -556,6 +557,7 @@ cc_library_static {
         "core/sensor_type.cc",
         "core/sensor.cc",
         "core/settings.cc",
+        "core/system_health_monitor.cc",
         "core/timer_pool.cc",
         "core/wifi_request_manager.cc",
         "core/wifi_scan_request.cc",
