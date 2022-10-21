@@ -15,9 +15,14 @@
  */
 
 #include "chre/util/pigweed/rpc_server.h"
+
+#include <cinttypes>
+#include <cstdint>
+
 #include "chre/event.h"
 #include "chre/re.h"
 #include "chre/util/nanoapp/log.h"
+#include "chre/util/pigweed/rpc_helper.h"
 
 #ifndef LOG_TAG
 #define LOG_TAG "[RpcServer]"
@@ -25,12 +30,21 @@
 
 namespace chre {
 
+RpcServer::~RpcServer() {
+  chreConfigureNanoappInfoEvents(false);
+  // TODO(b/251257328): Disable all notifications at once.
+  while (mConnectedHosts.size() > 0) {
+    chreConfigureHostEndpointNotifications(mConnectedHosts[0], false);
+    mConnectedHosts.erase(0);
+  }
+}
+
 bool RpcServer::registerServices(size_t numServices,
                                  RpcServer::Service *services) {
   for (size_t i = 0; i < numServices; ++i) {
     const Service &service = services[i];
     chreNanoappRpcService chreService = {
-        .id = static_cast<uint64_t>(service.service.id()),
+        .id = service.id,
         .version = service.version,
     };
 
@@ -46,10 +60,17 @@ bool RpcServer::registerServices(size_t numServices,
 
 bool RpcServer::handleEvent(uint32_t senderInstanceId, uint16_t eventType,
                             const void *eventData) {
-  UNUSED_VAR(senderInstanceId);
   switch (eventType) {
     case CHRE_EVENT_MESSAGE_FROM_HOST:
       return handleMessageFromHost(eventData);
+    case ChreChannelOutputBase::PW_RPC_CHRE_NAPP_REQUEST_EVENT_TYPE:
+      return handleMessageFromNanoapp(senderInstanceId, eventData);
+    case CHRE_EVENT_HOST_ENDPOINT_NOTIFICATION:
+      handleHostClientNotification(eventData);
+      return true;
+    case CHRE_EVENT_NANOAPP_STOPPED:
+      handleNanoappStopped(eventData);
+      return true;
     default:
       return true;
   }
@@ -57,7 +78,11 @@ bool RpcServer::handleEvent(uint32_t senderInstanceId, uint16_t eventType,
 
 bool RpcServer::handleMessageFromHost(const void *eventData) {
   auto *hostMessage = static_cast<const chreMessageFromHostData *>(eventData);
-  mOutput.setHostEndpoint(hostMessage->hostEndpoint);
+
+  if (hostMessage->messageType !=
+      ChreChannelOutputBase::PW_RPC_CHRE_HOST_MESSAGE_TYPE) {
+    return false;
+  }
 
   std::span packet(static_cast<const std::byte *>(hostMessage->message),
                    hostMessage->messageSize);
@@ -68,12 +93,94 @@ bool RpcServer::handleMessageFromHost(const void *eventData) {
     return false;
   }
 
-  mServer.OpenChannel(result.value(), mOutput);
+  if (!validateHostChannelId(hostMessage, result.value())) {
+    return false;
+  }
 
-  pw::Status success = mServer.ProcessPacket(packet, mOutput);
-  LOGI("Parsing packet %d", success == pw::OkStatus());
+  if (!chreConfigureHostEndpointNotifications(hostMessage->hostEndpoint,
+                                              true)) {
+    LOGW("Fail to register for host client updates");
+  }
 
-  return success == pw::OkStatus();
+  size_t hostIndex = mConnectedHosts.find(hostMessage->hostEndpoint);
+  if (hostIndex == mConnectedHosts.size()) {
+    mConnectedHosts.push_back(hostMessage->hostEndpoint);
+  }
+
+  mHostOutput.setHostEndpoint(hostMessage->hostEndpoint);
+  mServer.OpenChannel(result.value(), mHostOutput);
+
+  pw::Status status = mServer.ProcessPacket(packet, mHostOutput);
+
+  if (status != pw::OkStatus()) {
+    LOGE("Failed to process the packet");
+    return false;
+  }
+
+  return true;
+}
+
+// TODO(b/242301032): factor code with handleMessageFromHost
+bool RpcServer::handleMessageFromNanoapp(uint32_t senderInstanceId,
+                                         const void *eventData) {
+  const auto data = static_cast<const ChrePigweedNanoappMessage *>(eventData);
+  std::span packet(static_cast<const std::byte *>(data->msg), data->msgSize);
+
+  pw::Result result = pw::rpc::ExtractChannelId(packet);
+  if (result.status() != PW_STATUS_OK) {
+    LOGE("Unable to extract channel ID from packet");
+    return false;
+  }
+
+  if (!validateNanoappChannelId(senderInstanceId, result.value())) {
+    return false;
+  }
+
+  chreConfigureNanoappInfoEvents(true);
+
+  mNanoappOutput.setNanoappEndpoint(senderInstanceId);
+  mServer.OpenChannel(result.value(), mNanoappOutput);
+
+  pw::Status success = mServer.ProcessPacket(packet, mNanoappOutput);
+
+  if (success != pw::OkStatus()) {
+    LOGE("Failed to process the packet");
+    return false;
+  }
+
+  return true;
+}
+
+void RpcServer::handleHostClientNotification(const void *eventData) {
+  if (mConnectedHosts.size() == 0) {
+    return;
+  }
+
+  auto notif =
+      static_cast<const struct chreHostEndpointNotification *>(eventData);
+
+  if (notif->notificationType == HOST_ENDPOINT_NOTIFICATION_TYPE_DISCONNECT) {
+    size_t hostIndex = mConnectedHosts.find(notif->hostEndpointId);
+    if (hostIndex != mConnectedHosts.size()) {
+      mServer.CloseChannel(kChannelIdHostClient |
+                           static_cast<uint32_t>(notif->hostEndpointId));
+      mConnectedHosts.erase(hostIndex);
+    }
+  }
+}
+
+void RpcServer::handleNanoappStopped(const void *eventData) {
+  auto info = static_cast<const struct chreNanoappInfo *>(eventData);
+
+  if (info->instanceId > kRpcNanoappMaxId) {
+    LOGE("Invalid nanoapp Id 0x%08" PRIx32, info->instanceId);
+  } else {
+    mServer.CloseChannel(info->instanceId);
+  }
+}
+
+pw::Status RpcServer::closeChannel(uint32_t id) {
+  return mServer.CloseChannel(id);
 }
 
 }  // namespace chre
