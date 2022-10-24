@@ -241,6 +241,12 @@ void SocketServer::serviceSocket() {
   while (!sSignalReceived) {
     int ret = ppoll(mPollFds, 1 + kMaxActiveClients, nullptr, &signalMask);
     if (ret == -1) {
+      // Don't use TEMP_FAILURE_RETRY since our logic needs to check
+      // sSignalReceived to see if it should exit where as TEMP_FAILURE_RETRY
+      // is a tight retry loop around ppoll.
+      if (errno == EINTR) {
+        continue;
+      }
       LOGI("Exiting poll loop: %s", strerror(errno));
       break;
     }

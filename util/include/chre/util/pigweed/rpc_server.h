@@ -19,7 +19,9 @@
 
 #include <span>
 
+#include "chre/util/dynamic_vector.h"
 #include "chre/util/macros.h"
+#include "chre/util/non_copyable.h"
 #include "chre/util/pigweed/chre_channel_output.h"
 #include "pw_rpc/server.h"
 #include "pw_rpc/service.h"
@@ -29,7 +31,7 @@ namespace chre {
 /**
  * RPC Server wrapping a Pigweed RPC server.
  *
- * This helper class handle Pigweed RPC calls on the server side.
+ * This helper class handles Pigweed RPC calls on the server side.
  *
  * The services must be registered from the `nanoappStart` function using
  * the `registerService` method.
@@ -37,11 +39,17 @@ namespace chre {
  * The `handleEvent` method must be called at the beginning of the
  * `nanoappHandleEvent` function to respond to RPC calls from the clients.
  */
-class RpcServer {
+class RpcServer : public NonCopyable {
  public:
   struct Service {
     /** A Pigweed service. */
     pw::rpc::Service &service;
+    /**
+     * The ID of the service, it must be generated according to RFC 4122, UUID
+     * version 4 (random). This ID must be unique within a given nanoapp.
+     */
+    uint64_t id;
+
     /**
      * The version of the service. It should be in sync with the version on the
      * client side.
@@ -50,6 +58,7 @@ class RpcServer {
   };
 
   RpcServer() : mServer(std::span(mChannels, ARRAY_SIZE(mChannels))) {}
+  ~RpcServer();
 
   /**
    * Registers services to the server and to CHRE.
@@ -67,12 +76,17 @@ class RpcServer {
    * Handles events related to RPC services.
    *
    * Handles the following events:
-   * - CHRE_EVENT_MESSAGE_FROM_HOST: respond to RPC requests.
+   * - CHRE_EVENT_MESSAGE_FROM_HOST: respond to host RPC requests,
+   * - PW_RPC_CHRE_NAPP_REQUEST_EVENT_TYPE: respond to nanoapp RPC requests,
+   * - CHRE_EVENT_HOST_ENDPOINT_NOTIFICATION: close the channel when the host
+   *   terminates,
+   * - CHRE_EVENT_NANOAPP_STOPPED: close the channel when a nanoapp
+   *   terminates.
    *
-   * @param senderInstanceId  The Instance ID for the source of this event.
-   * @param eventType  The event type.
-   * @param eventData  The associated data, if any, for this specific type of
-   *                   event.
+   * @param senderInstanceId The Instance ID for the source of this event.
+   * @param eventType The event type.
+   * @param eventData The associated data, if any, for this specific type of
+   *                  event.
    * @return whether any event was handled successfully.
    */
   bool handleEvent(uint32_t senderInstanceId, uint16_t eventType,
@@ -80,7 +94,7 @@ class RpcServer {
 
  private:
   /**
-   * Handles messages from host client.
+   * Handles messages from host clients.
    *
    * This method must be called when nanoapps receive a
    * CHRE_EVENT_MESSAGE_FROM_HOST event.
@@ -90,11 +104,71 @@ class RpcServer {
    */
   bool handleMessageFromHost(const void *eventData);
 
+  /**
+   * Handles messages from nanoapp clients.
+   *
+   * This method must be called when nanoapps receive a
+   * PW_RPC_CHRE_NAPP_REQUEST_EVENT_TYPE event.
+   *
+   * @param eventData  The associated data, if any.
+   * @return whether the RPC was handled successfully.
+   */
+  bool handleMessageFromNanoapp(uint32_t senderInstanceId,
+                                const void *eventData);
+
+  /**
+   * Closes the Pigweed channel when a host client disconnects.
+   *
+   * @param notification The notification from the host client
+   */
+  void handleHostClientNotification(const void *eventData);
+
+  /**
+   * Closes the Pigweed channel when a nanoapp client disconnects.
+   *
+   * @param notification The eventData associated to a
+   *    CHRE_EVENT_NANOAPP_STOPPED event.
+   */
+  void handleNanoappStopped(const void *eventData);
+
+  /**
+   * Validates that the host client sending the message matches the expected
+   * channel ID.
+   *
+   * @param msg Message received from the host client.
+   * @param channelId Channel ID extracted from the received packet.
+   * @return Whether the IDs match.
+   */
+  bool validateHostChannelId(const chreMessageFromHostData *msg,
+                             uint32_t channelId);
+  /**
+   * Validates that the nanoapp client sending the message matches the expected
+   * channel ID.
+   *
+   * @param senderInstanceId ID of the nanoapp sending the message.
+   * @param channelId Channel ID extracted from the received packet.
+   * @return Whether the IDs match.
+   */
+  bool validateNanoappChannelId(uint32_t senderInstanceId, uint32_t channelId);
+
+  /**
+   * Closes a Pigweed channel.
+   *
+   * @param id The channel ID.
+   * @return either an ok or not found status if the channel was not opened.
+   */
+  pw::Status closeChannel(uint32_t id);
+
   // TODO(b/210138227): Make # of channels dynamic
   pw::rpc::Channel mChannels[5];
   pw::rpc::Server mServer;
 
-  ChreHostChannelOutput mOutput;
+  ChreHostChannelOutput mHostOutput;
+  ChreNanoappChannelOutput mNanoappOutput{
+      ChreNanoappChannelOutput::Role::SERVER};
+
+  // Host endpoints for the connected clients.
+  DynamicVector<uint16_t> mConnectedHosts;
 };
 
 }  // namespace chre
