@@ -295,6 +295,10 @@ class WifiRequestManager : public NonCopyable {
   struct PendingRequestBase {
     uint16_t nanoappInstanceId;  //!< ID of the Nanoapp issuing this request
     const void *cookie;          //!< User data supplied by the nanoapp
+
+    PendingRequestBase() = default;
+    PendingRequestBase(uint16_t nanoappInstanceId_, const void *cookie_)
+        : nanoappInstanceId(nanoappInstanceId_), cookie(cookie_) {}
   };
 
   struct PendingRangingRequestBase : public PendingRequestBase {
@@ -331,6 +335,11 @@ class WifiRequestManager : public NonCopyable {
 
   struct PendingScanRequest : public PendingRequestBase {
     struct chreWifiScanParams scanParams;
+
+    PendingScanRequest(uint16_t nanoappInstanceId_, const void *cookie_,
+                       const struct chreWifiScanParams *scanParams_)
+        : PendingRequestBase(nanoappInstanceId_, cookie_),
+          scanParams(*scanParams_) {}
   };
 
   //! An internal struct to hold scan request data for logging
@@ -422,7 +431,7 @@ class WifiRequestManager : public NonCopyable {
 
   //! Manages the timer that starts when a configure scan request is dispatched
   //! to the PAL.
-  TimerHandle mScanRequestTimeoutHandle;
+  TimerHandle mScanRequestTimeoutHandle = CHRE_TIMER_INVALID;
 
   //! System time when the last WiFi scan event was received.
   Milliseconds mLastScanEventTime;
