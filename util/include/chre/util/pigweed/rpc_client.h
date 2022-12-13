@@ -81,6 +81,15 @@ class RpcClient : public NonCopyable {
   template <typename T>
   Optional<T> get();
 
+  /**
+   * Returns whether the server nanoapp supports the service.
+   *
+   * Also returns false when the nanoapp is not loaded.
+   *
+   * @return whether the service is published by the server.
+   */
+  bool hasService(uint64_t id, uint32_t version);
+
  private:
   /**
    * Handles responses from the server.
@@ -103,8 +112,7 @@ class RpcClient : public NonCopyable {
    */
   void handleNanoappStopped(const void *eventData);
 
-  ChreNanoappChannelOutput mChannelOutput{
-      ChreNanoappChannelOutput::Role::CLIENT};
+  ChreClientNanoappChannelOutput mChannelOutput;
   pw::rpc::Channel mChannel;
   const pw::span<pw::rpc::Channel> mChannels;
   pw::rpc::Client mRpcClient;
@@ -123,7 +131,6 @@ Optional<T> RpcClient::get() {
     }
 
     mChannelId = chreGetInstanceId();
-    mChannelOutput.setNanoappEndpoint(mChannelId);
     mChannelOutput.setServer(info.instanceId);
     mChannel.Configure(mChannelId, mChannelOutput);
   }
