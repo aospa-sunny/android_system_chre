@@ -41,21 +41,31 @@ RpcServer::~RpcServer() {
 
 bool RpcServer::registerServices(size_t numServices,
                                  RpcServer::Service *services) {
+  // Avoid blowing up the stack with chreServices.
+  constexpr size_t kMaxServices = 32;
+
+  if (numServices > kMaxServices) {
+    LOGE("Can not register more than %zu services", kMaxServices);
+    return false;
+  }
+
+  chreNanoappRpcService chreServices[numServices];
+
   for (size_t i = 0; i < numServices; ++i) {
     const Service &service = services[i];
-    chreNanoappRpcService chreService = {
+    chreServices[i] = {
         .id = service.id,
         .version = service.version,
     };
 
-    if (!chrePublishRpcServices(&chreService, 1 /* numServices */)) {
-      return false;
-    }
-
     mServer.RegisterService(service.service);
   }
 
-  return true;
+  return chrePublishRpcServices(chreServices, numServices);
+}
+
+void RpcServer::setPermissionForNextMessage(uint32_t permission) {
+  mPermission.set(permission);
 }
 
 bool RpcServer::handleEvent(uint32_t senderInstanceId, uint16_t eventType,
@@ -138,7 +148,7 @@ bool RpcServer::handleMessageFromNanoapp(uint32_t senderInstanceId,
 
   chreConfigureNanoappInfoEvents(true);
 
-  mNanoappOutput.setNanoappEndpoint(senderInstanceId);
+  mNanoappOutput.setClient(senderInstanceId);
   mServer.OpenChannel(result.value(), mNanoappOutput);
 
   pw::Status success = mServer.ProcessPacket(packet);
