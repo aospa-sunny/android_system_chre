@@ -17,10 +17,10 @@
 #ifndef CHRE_UTIL_PIGWEED_PERMISSION_H_
 #define CHRE_UTIL_PIGWEED_PERMISSION_H_
 
+#include <chre.h>
 #include <cstdint>
 #include <optional>
 
-#include "chre/event.h"
 #include "chre/util/nanoapp/assert.h"
 #include "chre/util/non_copyable.h"
 #include "chre/util/optional.h"
