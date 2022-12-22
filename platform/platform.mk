@@ -98,6 +98,7 @@ SLPI_SRCS += platform/shared/chre_api_user_settings.cc
 SLPI_SRCS += platform/shared/chre_api_version.cc
 SLPI_SRCS += platform/shared/chre_api_wifi.cc
 SLPI_SRCS += platform/shared/chre_api_wwan.cc
+SLPI_SRCS += platform/shared/host_link.cc
 SLPI_SRCS += platform/shared/host_protocol_chre.cc
 SLPI_SRCS += platform/shared/host_protocol_common.cc
 SLPI_SRCS += platform/shared/memory_manager.cc
@@ -388,6 +389,7 @@ EXYNOS_CFLAGS += -I$(CHRE_PREFIX)/platform/exynos/include
 EXYNOS_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/audio_pal/include
 
 EXYNOS_SRCS += $(CHRE_PREFIX)/platform/exynos/chre_api_re.cc
+EXYNOS_SRCS += $(CHRE_PREFIX)/platform/shared/host_link.cc
 EXYNOS_SRCS += $(CHRE_PREFIX)/platform/exynos/host_link.cc
 EXYNOS_SRCS += $(CHRE_PREFIX)/platform/exynos/memory.cc
 EXYNOS_SRCS += $(CHRE_PREFIX)/platform/exynos/platform_cache_management.cc
@@ -415,3 +417,70 @@ endif
 
 # ARM specific compiler flags
 ARM_CFLAGS += -I$(CHRE_PREFIX)/platform/arm/include
+
+# Tinysys Configurations ######################################################
+
+# Tinysys sources
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/chre_init.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/condition_variable_base.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/host_cpu_update.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/host_link.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/memory.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/system_time.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/system_timer.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/power_control_manager.cc
+
+# Freertos sources
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/init.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/platform_nanoapp.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/memory_manager.cc
+
+# Shared sources
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/assert.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_audio.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_ble.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_core.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_gnss.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_re.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_user_settings.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_version.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_wifi.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/chre_api_wwan.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/dram_vote_client.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/dlfcn.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/log_buffer.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/memory_manager.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/pal_sensor_stub.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/platform_debug_dump_manager.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp_loader.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/system_time.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/version.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp/nanoapp_dso_util.cc
+
+
+# Compiler flags
+
+# Variables
+TINYSYS_CLANG_PREFIX = $(RISCV_PREFIX)/../../../../prebuilts/clang
+TINYSYS_PLATFORM = mt6985
+
+# CHRE include paths
+TINYSYS_CFLAGS += -I$(CHRE_PREFIX)/platform/tinysys/include
+TINYSYS_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/include
+TINYSYS_CFLAGS += -I$(CHRE_PREFIX)/platform/freertos/include
+TINYSYS_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/include/chre/platform/shared/libc
+
+# Tinysys include paths
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/kernel/FreeRTOS_v10.1.0.1/FreeRTOS/Source/include
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/kernel/FreeRTOS_v10.1.0.1/FreeRTOS/Source/portable/LLVM/RV55
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/common/drivers/irq/v3/inc
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/common/include
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/scp/drivers/RV55_A/$(TINYSYS_PLATFORM)/intc/inc
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/scp/drivers/common/xgpt/inc
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/scp/middleware/sensorhub/include
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/scp/project/RV55_A/$(TINYSYS_PLATFORM)/platform/inc
+TINYSYS_CFLAGS += -I$(RISCV_PREFIX)/scp/project/RV55_A/common/platform/inc
+
+# Clang include paths
+TINYSYS_CFLAGS += -I$(TINYSYS_CLANG_PREFIX)/md32rv/linux-x86/lib/clang/9.0.1/include
+TINYSYS_CFLAGS += -I$(TINYSYS_CLANG_PREFIX)/md32rv/linux-x86/dkwlib/MRV55E03v/include

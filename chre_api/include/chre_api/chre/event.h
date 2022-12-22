@@ -395,10 +395,9 @@ struct chreNanoappInfo {
      * address an event specifically to this nanoapp.  This identifier is
      * guaranteed to be unique among all nanoapps in the system.
      *
-     * @since v1.6
-     * Instance ID is guaranteed to never go beyond INT16_MAX. This helps the
-     * instance ID be packed into other information inside an int (useful for
-     * RPC routing).
+     * As of CHRE API v1.6, instance ID is guaranteed to never be greater than
+     * UINT16_MAX. This allows for the instance ID be packed with other data
+     * inside a 32-bit integer (useful for RPC routing).
      */
     uint32_t instanceId;
 };
@@ -831,7 +830,8 @@ void chreConfigureDebugDumpEvent(bool enable);
  * endpoint that is connected with the Context Hub.
  *
  * If this API succeeds, the nanoapp will receive disconnection notifications,
- * via the CHRE_EVENT_HOST_ENDPOINT_NOTIFICATION event with type
+ * via the CHRE_EVENT_HOST_ENDPOINT_NOTIFICATION event with an eventData of type
+ * chreHostEndpointNotification with its notificationType set to
  * HOST_ENDPOINT_NOTIFICATION_TYPE_DISCONNECT, which can be invoked if the host
  * has disconnected from the Context Hub either explicitly or implicitly (e.g.
  * crashes). Nanoapps can use this notifications to clean up any resources
