@@ -16,11 +16,10 @@
 
 #include "chre/util/pigweed/rpc_server.h"
 
+#include <chre.h>
 #include <cinttypes>
 #include <cstdint>
 
-#include "chre/event.h"
-#include "chre/re.h"
 #include "chre/util/nanoapp/log.h"
 #include "chre/util/pigweed/rpc_helper.h"
 
@@ -33,7 +32,7 @@ namespace chre {
 RpcServer::~RpcServer() {
   chreConfigureNanoappInfoEvents(false);
   // TODO(b/251257328): Disable all notifications at once.
-  while (mConnectedHosts.size() > 0) {
+  while (!mConnectedHosts.empty()) {
     chreConfigureHostEndpointNotifications(mConnectedHosts[0], false);
     mConnectedHosts.erase(0);
   }
@@ -41,21 +40,31 @@ RpcServer::~RpcServer() {
 
 bool RpcServer::registerServices(size_t numServices,
                                  RpcServer::Service *services) {
+  // Avoid blowing up the stack with chreServices.
+  constexpr size_t kMaxServices = 8;
+
+  if (numServices > kMaxServices) {
+    LOGE("Can not register more than %zu services at once", kMaxServices);
+    return false;
+  }
+
+  chreNanoappRpcService chreServices[kMaxServices];
+
   for (size_t i = 0; i < numServices; ++i) {
     const Service &service = services[i];
-    chreNanoappRpcService chreService = {
+    chreServices[i] = {
         .id = service.id,
         .version = service.version,
     };
 
-    if (!chrePublishRpcServices(&chreService, 1 /* numServices */)) {
-      return false;
-    }
-
     mServer.RegisterService(service.service);
   }
 
-  return true;
+  return chrePublishRpcServices(chreServices, numServices);
+}
+
+void RpcServer::setPermissionForNextMessage(uint32_t permission) {
+  mPermission.set(permission);
 }
 
 bool RpcServer::handleEvent(uint32_t senderInstanceId, uint16_t eventType,
@@ -87,7 +96,7 @@ bool RpcServer::handleMessageFromHost(const void *eventData) {
   pw::span packet(static_cast<const std::byte *>(hostMessage->message),
                   hostMessage->messageSize);
 
-  pw::Result result = pw::rpc::ExtractChannelId(packet);
+  pw::Result<uint32_t> result = pw::rpc::ExtractChannelId(packet);
   if (result.status() != PW_STATUS_OK) {
     LOGE("Unable to extract channel ID from packet");
     return false;
@@ -126,7 +135,7 @@ bool RpcServer::handleMessageFromNanoapp(uint32_t senderInstanceId,
   const auto data = static_cast<const ChrePigweedNanoappMessage *>(eventData);
   pw::span packet(static_cast<const std::byte *>(data->msg), data->msgSize);
 
-  pw::Result result = pw::rpc::ExtractChannelId(packet);
+  pw::Result<uint32_t> result = pw::rpc::ExtractChannelId(packet);
   if (result.status() != PW_STATUS_OK) {
     LOGE("Unable to extract channel ID from packet");
     return false;
@@ -138,7 +147,7 @@ bool RpcServer::handleMessageFromNanoapp(uint32_t senderInstanceId,
 
   chreConfigureNanoappInfoEvents(true);
 
-  mNanoappOutput.setNanoappEndpoint(senderInstanceId);
+  mNanoappOutput.setClient(senderInstanceId);
   mServer.OpenChannel(result.value(), mNanoappOutput);
 
   pw::Status success = mServer.ProcessPacket(packet);
@@ -152,7 +161,7 @@ bool RpcServer::handleMessageFromNanoapp(uint32_t senderInstanceId,
 }
 
 void RpcServer::handleHostClientNotification(const void *eventData) {
-  if (mConnectedHosts.size() == 0) {
+  if (mConnectedHosts.empty()) {
     return;
   }
 

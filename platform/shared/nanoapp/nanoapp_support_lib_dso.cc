@@ -165,6 +165,15 @@ const struct chreNslNanoappInfo *getChreNslDsoNanoappInfo() {
 
 #include <dlfcn.h>
 
+namespace {
+// Populate chreNanoappInfo for CHRE API pre v1.8.
+void populateChreNanoappInfoPre18(struct chreNanoappInfo *info) {
+  info->rpcServiceCount = 0;
+  info->rpcServices = nullptr;
+  memset(&info->reserved, 0, sizeof(info->reserved));
+}
+}  // namespace
+
 /**
  * Lazily calls dlsym to find the function pointer for a given function
  * (provided without quotes) in another library (i.e. the CHRE platform DSO),
@@ -417,6 +426,25 @@ bool chreGetHostEndpointInfo(uint16_t hostEndpointId,
                              struct chreHostEndpointInfo *info) {
   auto *fptr = CHRE_NSL_LAZY_LOOKUP(chreGetHostEndpointInfo);
   return (fptr != nullptr) ? fptr(hostEndpointId, info) : false;
+}
+
+bool chreGetNanoappInfoByAppId(uint64_t appId, struct chreNanoappInfo *info) {
+  auto *fptr = CHRE_NSL_LAZY_LOOKUP(chreGetNanoappInfoByAppId);
+  bool success = (fptr != nullptr) ? fptr(appId, info) : false;
+  if (success && chreGetApiVersion() < CHRE_API_VERSION_1_8) {
+    populateChreNanoappInfoPre18(info);
+  }
+  return success;
+}
+
+bool chreGetNanoappInfoByInstanceId(uint32_t instanceId,
+                                    struct chreNanoappInfo *info) {
+  auto *fptr = CHRE_NSL_LAZY_LOOKUP(chreGetNanoappInfoByInstanceId);
+  bool success = (fptr != nullptr) ? fptr(instanceId, info) : false;
+  if (success && chreGetApiVersion() < CHRE_API_VERSION_1_8) {
+    populateChreNanoappInfoPre18(info);
+  }
+  return success;
 }
 
 #endif  // CHRE_NANOAPP_DISABLE_BACKCOMPAT

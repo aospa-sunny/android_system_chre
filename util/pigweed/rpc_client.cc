@@ -16,11 +16,10 @@
 
 #include "chre/util/pigweed/rpc_client.h"
 
+#include <chre.h>
 #include <cinttypes>
 #include <cstdint>
 
-#include "chre/event.h"
-#include "chre/re.h"
 #include "chre/util/macros.h"
 #include "chre/util/nanoapp/log.h"
 #include "chre/util/pigweed/rpc_helper.h"
@@ -42,6 +41,21 @@ bool RpcClient::handleEvent(uint32_t senderInstanceId, uint16_t eventType,
   }
 
   return true;
+}
+
+bool RpcClient::hasService(uint64_t id, uint32_t version) {
+  struct chreNanoappInfo info;
+  if (!chreGetNanoappInfoByAppId(mServerNanoappId, &info)) {
+    return false;
+  }
+
+  for (uint32_t i = 0; i < info.rpcServiceCount; i++) {
+    if (info.rpcServices[i].id == id) {
+      return info.rpcServices[i].version == version;
+    }
+  }
+
+  return false;
 }
 
 bool RpcClient::handleMessageFromServer(uint32_t senderInstanceId,

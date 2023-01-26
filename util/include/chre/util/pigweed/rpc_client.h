@@ -17,10 +17,9 @@
 #ifndef CHRE_UTIL_PIGWEED_RPC_CLIENT_H_
 #define CHRE_UTIL_PIGWEED_RPC_CLIENT_H_
 
+#include <chre.h>
 #include <cstdint>
 
-#include "chre/event.h"
-#include "chre/re.h"
 #include "chre/util/non_copyable.h"
 #include "chre/util/optional.h"
 #include "chre/util/pigweed/chre_channel_output.h"
@@ -45,9 +44,7 @@ class RpcClient : public NonCopyable {
    * @param serverNanoappId Nanoapp ID of the server.
    */
   explicit RpcClient(uint64_t serverNanoappId)
-      : mChannels(pw::span(&mChannel, 1)),
-        mRpcClient(pw::rpc::Client(mChannels)),
-        mServerNanoappId((serverNanoappId)) {}
+      : mServerNanoappId((serverNanoappId)) {}
 
   ~RpcClient() {
     chreConfigureNanoappInfoEvents(false);
@@ -81,6 +78,15 @@ class RpcClient : public NonCopyable {
   template <typename T>
   Optional<T> get();
 
+  /**
+   * Returns whether the server nanoapp supports the service.
+   *
+   * Also returns false when the nanoapp is not loaded.
+   *
+   * @return whether the service is published by the server.
+   */
+  bool hasService(uint64_t id, uint32_t version);
+
  private:
   /**
    * Handles responses from the server.
@@ -103,10 +109,7 @@ class RpcClient : public NonCopyable {
    */
   void handleNanoappStopped(const void *eventData);
 
-  ChreNanoappChannelOutput mChannelOutput{
-      ChreNanoappChannelOutput::Role::CLIENT};
-  pw::rpc::Channel mChannel;
-  const pw::span<pw::rpc::Channel> mChannels;
+  ChreClientNanoappChannelOutput mChannelOutput;
   pw::rpc::Client mRpcClient;
   uint64_t mServerNanoappId;
   uint32_t mChannelId = 0;
@@ -123,9 +126,8 @@ Optional<T> RpcClient::get() {
     }
 
     mChannelId = chreGetInstanceId();
-    mChannelOutput.setNanoappEndpoint(mChannelId);
     mChannelOutput.setServer(info.instanceId);
-    mChannel.Configure(mChannelId, mChannelOutput);
+    mRpcClient.OpenChannel(mChannelId, mChannelOutput);
   }
 
   chreConfigureNanoappInfoEvents(true);
