@@ -25,19 +25,16 @@ namespace chre {
 
 /**
  * Gets the preloaded nanoapps from the config file at path: configFilePath.
- * This passes any errors to errorFunction.
  *
  * @param configFilePath        the file path of the config file on the device
- * @param errorFunction         called when an error occurs
  * @param outDirectory          (out) the directory that contains the nanoapps
- * on the device
+ *                              on the device
  * @param outNanoapps           (out) the list of nanoapps in the directory
  * @return bool                 success
  */
-bool getPreloadedNanoappsFromConfigFile(
-    const std::string &configFilePath,
-    const std::function<void(const std::string &)> &errorFunction,
-    std::string &outDirectory, std::vector<std::string> &outNanoapps);
+bool getPreloadedNanoappsFromConfigFile(const std::string &configFilePath,
+                                        std::string &outDirectory,
+                                        std::vector<std::string> &outNanoapps);
 
 }  // namespace chre
 }  // namespace android

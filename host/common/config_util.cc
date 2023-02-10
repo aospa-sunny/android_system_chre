@@ -15,6 +15,7 @@
  */
 
 #include "chre_host/config_util.h"
+#include "chre_host/log.h"
 
 #include <json/json.h>
 #include <fstream>
@@ -22,23 +23,22 @@
 namespace android {
 namespace chre {
 
-bool getPreloadedNanoappsFromConfigFile(
-    const std::string &configFilePath,
-    const std::function<void(const std::string &)> &errorFunction,
-    std::string &outDirectory, std::vector<std::string> &outNanoapps) {
+bool getPreloadedNanoappsFromConfigFile(const std::string &configFilePath,
+                                        std::string &outDirectory,
+                                        std::vector<std::string> &outNanoapps) {
   std::ifstream configFileStream(configFilePath);
 
   Json::CharReaderBuilder builder;
   Json::Value config;
   if (!configFileStream) {
-    errorFunction("Failed to open config file '" + configFilePath + "'");
+    LOGE("Failed to open config file '%s'", configFilePath.c_str());
     return false;
   } else if (!Json::parseFromStream(builder, configFileStream, &config,
                                     /* errs = */ nullptr)) {
-    errorFunction("Failed to parse nanoapp config file");
+    LOGE("Failed to parse nanoapp config file");
     return false;
   } else if (!config.isMember("nanoapps") || !config.isMember("source_dir")) {
-    errorFunction("Malformed preloaded nanoapps config");
+    LOGE("Malformed preloaded nanoapps config");
     return false;
   }
 
