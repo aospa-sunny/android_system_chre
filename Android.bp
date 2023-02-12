@@ -45,6 +45,45 @@ license {
 }
 
 cc_library_static {
+    name: "contexthub_generic_aidl_hal_core_lib",
+    vendor_available: true,
+    export_include_dirs: [
+        "host/common/include",
+    ],
+    srcs: [
+        "host/common/preloaded_nanoapp_loader.cc",
+        "host/common/time_syncer.cc",
+        "host/common/config_util.cc",
+        "host/common/log_message_parser.cc",
+        "host/hal_generic/common/permissions_util.cc",
+        "host/hal_generic/common/hal_client_manager.cc",
+    ],
+    local_include_dirs: [
+        "external/flatbuffers/include",
+        "host/hal_generic/common",
+        "platform/shared/include",
+        "util/include",
+    ],
+    shared_libs: [
+        "android.hardware.contexthub-V2-ndk",
+        "libbinder_ndk",
+        "libcutils",
+        "liblog",
+        "libutils",
+        "libjsoncpp",
+    ],
+    static_libs: [
+        "pw_varint",
+        "pw_detokenizer",
+    ],
+    header_libs: [
+        "pw_span_headers",
+        "pw_polyfill_headers",
+    ],
+    cflags: ["-Wall", "-Werror"]
+}
+
+cc_library_static {
     name: "chre_client",
     vendor_available: true,
     export_include_dirs: [
@@ -400,6 +439,9 @@ cc_library_static {
         "platform/linux/pal_wwan.cc",
         "platform/linux/platform_log.cc",
         "platform/linux/system_time.cc",
+        "platform/linux/task_util/task.cc",
+        "platform/linux/task_util/task_manager.cc",
+        "util/dynamic_vector_base.cc",
     ],
     export_include_dirs: [
         "platform/shared/include",
@@ -430,6 +472,7 @@ cc_test_host {
         "pal/util/wifi_pal_convert.c",
         "pal/util/wifi_scan_cache.c",
         "platform/tests/**/*.cc",
+        "platform/linux/tests/**/*.cc",
         "util/tests/**/*.cc",
     ],
     exclude_srcs: [
@@ -588,6 +631,8 @@ cc_library_static {
         "platform/linux/power_control_manager.cc",
         "platform/linux/system_time.cc",
         "platform/linux/system_timer.cc",
+        "platform/linux/task_util/task.cc",
+        "platform/linux/task_util/task_manager.cc",
         "platform/shared/audio_pal/platform_audio.cc",
         "platform/shared/chre_api_audio.cc",
         "platform/shared/chre_api_ble.cc",
@@ -604,6 +649,7 @@ cc_library_static {
         "platform/shared/platform_gnss.cc",
         "platform/shared/platform_wifi.cc",
         "platform/shared/system_time.cc",
+        "platform/shared/tracing.cc",
         "platform/shared/version.cc",
         "platform/shared/sensor_pal/platform_sensor.cc",
         "platform/shared/sensor_pal/platform_sensor_type_helpers.cc",
@@ -714,6 +760,7 @@ cc_library_static {
     ],
     shared_libs: [
         "libjsoncpp",
+        "liblog",
     ]
 }
 

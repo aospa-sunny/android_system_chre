@@ -78,16 +78,8 @@ void ChreDaemonBase::loadPreloadedNanoapps() {
       "/vendor/etc/chre/preloaded_nanoapps.json";
   std::string directory;
   std::vector<std::string> nanoapps;
-
   bool success = getPreloadedNanoappsFromConfigFile(
-      kPreloadedNanoappsConfigPath,
-      [](const std::string &error) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-        LOG_PRI(ANDROID_LOG_ERROR, LOG_TAG, error.c_str());
-#pragma GCC diagnostic pop
-      },
-      directory, nanoapps);
+      kPreloadedNanoappsConfigPath, directory, nanoapps);
   if (!success) {
     LOGE("Failed to parse preloaded nanoapps config file");
     return;
@@ -109,7 +101,7 @@ void ChreDaemonBase::loadPreloadedNanoapp(const std::string &directory,
   // within the directory its own binary resides in.
   std::string nanoappFilename = name + ".so";
 
-  if (!readFileContents(headerFile.c_str(), &headerBuffer) ||
+  if (!readFileContents(headerFile.c_str(), headerBuffer) ||
       !loadNanoapp(headerBuffer, nanoappFilename, transactionId)) {
     LOGE("Failed to load nanoapp: '%s'", name.c_str());
   }
