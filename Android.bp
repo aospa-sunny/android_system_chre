@@ -57,6 +57,7 @@ cc_library_static {
         "host/common/log_message_parser.cc",
         "host/hal_generic/common/permissions_util.cc",
         "host/hal_generic/common/hal_client_manager.cc",
+        "host/hal_generic/common/multi_client_context_hub_base.cc",
     ],
     local_include_dirs: [
         "external/flatbuffers/include",
@@ -708,7 +709,8 @@ cc_defaults {
         "-DCHRE_WIFI_NAN_SUPPORT_ENABLED",
         "-DCHRE_TEST_WIFI_SCAN_RESULT_TIMEOUT_NS=3000000000",
         "-DCHRE_TEST_WIFI_RANGING_RESULT_TIMEOUT_NS=3000000000",
-        "-DCHRE_TEST_ASYNC_RESULT_TIMEOUT_NS=3000000000"
+        "-DCHRE_TEST_ASYNC_RESULT_TIMEOUT_NS=3000000000",
+        "-DCHRE_BLE_READ_RSSI_SUPPORT_ENABLED",
     ],
 }
 
@@ -801,4 +803,20 @@ java_library_static {
     },
     srcs: ["apps/test/common/chre_api_test/rpc/chre_api_test.proto"],
     sdk_version: "current",
+}
+
+cc_library_static {
+    name: "chre_host_util",
+    vendor_available: true,
+    host_supported: true,
+    export_include_dirs: [
+        "host/common/include",
+    ],
+    srcs: [
+        "host/common/file_stream.cc",
+    ],
+    shared_libs:[
+        "liblog",
+    ],
+    cflags: ["-Wall", "-Werror"]
 }
