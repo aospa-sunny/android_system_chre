@@ -16,6 +16,7 @@
 #ifndef ANDROID_HARDWARE_CONTEXTHUB_COMMON_HAL_CLIENT_MANAGER_H_
 #define ANDROID_HARDWARE_CONTEXTHUB_COMMON_HAL_CLIENT_MANAGER_H_
 
+#include <aidl/android/hardware/contexthub/ContextHubMessage.h>
 #include <aidl/android/hardware/contexthub/IContextHub.h>
 #include <aidl/android/hardware/contexthub/IContextHubCallback.h>
 #include <chre_host/fragmented_load_transaction.h>
@@ -27,13 +28,15 @@
 #include "chre_host/log.h"
 #include "hal_client_id.h"
 
+using aidl::android::hardware::contexthub::ContextHubMessage;
 using aidl::android::hardware::contexthub::HostEndpointInfo;
 using aidl::android::hardware::contexthub::IContextHubCallback;
+using HostEndpointId = uint16_t;
 
 namespace android::hardware::contexthub::common::implementation {
 
 /**
- * A singleton class managing clients for Context Hub HAL.
+ * A class managing clients for Context Hub HAL.
  *
  * A HAL client is defined as a user calling the IContextHub API. The main
  * purpose of this class are:
@@ -51,23 +54,15 @@ namespace android::hardware::contexthub::common::implementation {
  *
  * Note that HalClientManager is not responsible for generating endpoint ids,
  * which should be managed by HAL clients themselves.
- *
- * A subclass extending this class should make itself a singleton and initialize
- * the mDeathRecipient to handle a HAL client's disconnection.
- *
- * TODO(b/247124878): Add functions related to endpoints mapping.
  */
 class HalClientManager {
  public:
+  HalClientManager() = default;
   virtual ~HalClientManager() = default;
 
-  /** Disable copy and assignment constructors as this class should be a
-   * singleton.*/
+  /** Disable copy constructor and copy assignment to avoid duplicates. */
   HalClientManager(HalClientManager &) = delete;
   void operator=(const HalClientManager &) = delete;
-
-  /** Returns a newly created client id to uniquely identify a HAL client. */
-  virtual HalClientId createClientId();
 
   /**
    * Gets the client id allocated to the current HAL client.
@@ -143,6 +138,36 @@ class HalClientManager {
   void finishPendingUnloadTransaction(HalClientId clientId);
 
   /**
+   * Registers an endpoint id when it is connected to HAL.
+   *
+   * @return true if success, otherwise false.
+   */
+  bool registerEndpointId(const HostEndpointId &endpointId);
+
+  /**
+   * Removes an endpoint id when it is disconnected to HAL.
+   *
+   * @return true if success, otherwise false.
+   */
+  bool removeEndpointId(const HostEndpointId &endpointId);
+
+  /**
+   * Gets all the connected endpoints for the client identified by the pid.
+   *
+   * @return the pointer to the endpoint id set if the client is identifiable,
+   * otherwise nullptr.
+   */
+  const std::unordered_set<HostEndpointId> *getAllConnectedEndpoints(pid_t pid);
+
+  /** Sends a message to every connected endpoints. */
+  void sendMessageForAllCallbacks(
+      const ContextHubMessage &message,
+      const std::vector<std::string> &messageParams);
+
+  std::shared_ptr<IContextHubCallback> getCallbackForEndpoint(
+      const HostEndpointId &endpointId);
+
+  /**
    * Handles the client death event.
    *
    * @param pid of the client that loses the binder connection to the HAL.
@@ -153,8 +178,13 @@ class HalClientManager {
   static constexpr int64_t kTransactionTimeoutThresholdMs = 5000;  // 5 seconds
 
   struct HalClientInfo {
+    explicit HalClientInfo(
+        const std::shared_ptr<IContextHubCallback> &callback) {
+      this->callback = callback;
+    }
+    HalClientInfo() = default;
     std::shared_ptr<IContextHubCallback> callback;
-    std::unordered_set<uint32_t> activeEndpoints;
+    std::unordered_set<HostEndpointId> endpointIds{};
   };
 
   struct PendingTransaction {
@@ -190,7 +220,8 @@ class HalClientManager {
     }
   };
 
-  HalClientManager() = default;
+  /** Returns a newly created client id to uniquely identify a HAL client. */
+  virtual HalClientId createClientId();
 
   /**
    * Returns true if the load transaction is expected.
@@ -241,7 +272,7 @@ class HalClientManager {
   // next available client id
   HalClientId mNextClientId = 1;
 
-  // The lock guarding the access to clients' states and pending transactions.
+  // The lock guarding the access to clients' states and pending transactions
   std::mutex mLock;
   // The lock guarding the creation of client Ids
   std::mutex mClientIdLock;
@@ -250,13 +281,12 @@ class HalClientManager {
   std::unordered_map<pid_t, HalClientId> mPIdsToClientIds{};
   // Map from client ids to ClientInfos
   std::unordered_map<HalClientId, HalClientInfo> mClientIdsToClientInfo{};
+  // Map from endpoint ids to client ids
+  std::unordered_map<HostEndpointId, HalClientId> mEndpointIdsToClientIds{};
 
   // States tracking pending transactions
   std::optional<PendingLoadTransaction> mPendingLoadTransaction = std::nullopt;
   std::optional<PendingTransaction> mPendingUnloadTransaction = std::nullopt;
-
-  // Death recipient handling clients' disconnections
-  ndk::ScopedAIBinder_DeathRecipient mDeathRecipient;
 };
 }  // namespace android::hardware::contexthub::common::implementation
 
