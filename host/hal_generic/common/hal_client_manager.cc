@@ -18,6 +18,7 @@
 
 namespace android::hardware::contexthub::common::implementation {
 
+using aidl::android::hardware::contexthub::ContextHubMessage;
 using aidl::android::hardware::contexthub::HostEndpointInfo;
 using aidl::android::hardware::contexthub::IContextHubCallback;
 
@@ -56,27 +57,18 @@ std::shared_ptr<IContextHubCallback> HalClientManager::getCallback(
 bool HalClientManager::registerCallback(
     const std::shared_ptr<IContextHubCallback> &callback) {
   pid_t pid = AIBinder_getCallingPid();
-  HalClientId clientId = createClientId();
+  HalClientId clientId;
   {
     const std::lock_guard<std::mutex> lock(mLock);
     if (isKnownPId(pid)) {
-      LOGI("The pid %d is seen before. Overriding it", pid);
+      // Though this is rare, a client is allowed to override its callback
+      LOGW("The pid %d is seen before. Overriding its callback.", pid);
+      clientId = mPIdsToClientIds[pid];
+    } else {
+      clientId = createClientId();
     }
     mPIdsToClientIds[pid] = clientId;
-    mClientIdsToClientInfo[clientId] = {
-        .callback = callback,
-        .activeEndpoints = {},
-    };
-  }
-
-  // once the call to AIBinder_linkToDeath() is successful, the cookie is
-  // supposed to be release by the death recipient later.
-  auto *cookie = new pid_t(pid);
-  if (AIBinder_linkToDeath(callback->asBinder().get(), mDeathRecipient.get(),
-                           cookie) != STATUS_OK) {
-    LOGE("Failed to link client binder to death recipient");
-    delete cookie;
-    return false;
+    mClientIdsToClientInfo.emplace(clientId, HalClientInfo(callback));
   }
   return true;
 }
@@ -94,7 +86,8 @@ void HalClientManager::handleClientDeath(pid_t pid) {
     return;
   }
 
-  mClientIdsToClientInfo[clientId].callback.reset();
+  auto clientInfo = mClientIdsToClientInfo.at(clientId);
+  clientInfo.callback.reset();
   if (mPendingLoadTransaction.has_value() &&
       mPendingLoadTransaction->clientId == clientId) {
     mPendingLoadTransaction.reset();
@@ -103,7 +96,11 @@ void HalClientManager::handleClientDeath(pid_t pid) {
       mPendingUnloadTransaction->clientId == clientId) {
     mPendingUnloadTransaction.reset();
   }
+  for (const auto &endpointId : clientInfo.endpointIds) {
+    mEndpointIdsToClientIds.erase(endpointId);
+  }
   mClientIdsToClientInfo.erase(clientId);
+  LOGI("Process %" PRIu32 " is disconnected from HAL.", pid);
 }
 
 bool HalClientManager::registerPendingLoadTransaction(
@@ -238,5 +235,79 @@ bool HalClientManager::isNewTransactionAllowed(HalClientId clientId) {
     return true;
   }
   return true;
+}
+
+bool HalClientManager::registerEndpointId(const HostEndpointId &endpointId) {
+  pid_t pid = AIBinder_getCallingPid();
+  const std::lock_guard<std::mutex> lock(mLock);
+  if (!isKnownPId(pid)) {
+    LOGE("Unknown HAL client. Please register the callback first.");
+    return false;
+  }
+  HalClientId clientId = mPIdsToClientIds[pid];
+  mClientIdsToClientInfo[clientId].endpointIds.insert(endpointId);
+  mEndpointIdsToClientIds[endpointId] = clientId;
+  LOGI("Endpoint id %" PRIu16 " is connected to client %" PRIu16, endpointId,
+       clientId);
+  return true;
+}
+
+bool HalClientManager::removeEndpointId(const HostEndpointId &endpointId) {
+  pid_t pid = AIBinder_getCallingPid();
+  const std::lock_guard<std::mutex> lock(mLock);
+  if (!isKnownPId(pid)) {
+    LOGE("Unknown HAL client. Please register the callback first.");
+    return false;
+  }
+  HalClientId clientId = mPIdsToClientIds[pid];
+  if (mEndpointIdsToClientIds.find(endpointId) ==
+      mEndpointIdsToClientIds.end()) {
+    LOGW("The endpoint %" PRIu16 " is not connected.", endpointId);
+    return false;
+  }
+  mEndpointIdsToClientIds.erase(endpointId);
+  mClientIdsToClientInfo[clientId].endpointIds.erase(endpointId);
+  LOGI("Endpoint id %" PRIu16 " is removed from client %" PRIu16, endpointId,
+       clientId);
+  return true;
+}
+
+std::shared_ptr<IContextHubCallback> HalClientManager::getCallbackForEndpoint(
+    const HostEndpointId &endpointId) {
+  const std::lock_guard<std::mutex> lock(mLock);
+  if (mEndpointIdsToClientIds.find(endpointId) ==
+      mEndpointIdsToClientIds.end()) {
+    LOGE("Unknown endpoint id %" PRIu16 ". Please register the callback first.",
+         endpointId);
+    return nullptr;
+  }
+  HalClientId clientId = mEndpointIdsToClientIds[endpointId];
+  return mClientIdsToClientInfo[clientId].callback;
+}
+
+void HalClientManager::sendMessageForAllCallbacks(
+    const ContextHubMessage &message,
+    const std::vector<std::string> &messageParams) {
+  const std::lock_guard<std::mutex> lock(mLock);
+  for (const auto &[_, clientInfo] : mClientIdsToClientInfo) {
+    if (clientInfo.callback != nullptr) {
+      clientInfo.callback->handleContextHubMessage(message, messageParams);
+    }
+  }
+}
+
+const std::unordered_set<HostEndpointId>
+    *HalClientManager::getAllConnectedEndpoints(pid_t pid) {
+  const std::lock_guard<std::mutex> lock(mLock);
+  if (!isKnownPId(pid)) {
+    LOGE("Unknown HAL client with pid %d", pid);
+    return nullptr;
+  }
+  HalClientId clientId = mPIdsToClientIds[pid];
+  if (mClientIdsToClientInfo.find(clientId) == mClientIdsToClientInfo.end()) {
+    LOGE("Can't find any information for client id %" PRIu16, clientId);
+    return nullptr;
+  }
+  return &mClientIdsToClientInfo[clientId].endpointIds;
 }
 }  // namespace android::hardware::contexthub::common::implementation
