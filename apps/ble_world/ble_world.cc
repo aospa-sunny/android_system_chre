@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <chre.h>
 #include <inttypes.h>
 
+#include "chre/util/nanoapp/ble.h"
 #include "chre/util/nanoapp/log.h"
 #include "chre/util/time.h"
+#include "chre_api/chre.h"
 
 /**
  * @file
  *
  * This nanoapp is designed to continually start and stop BLE scans and verify
- * that the expected data is delivered. BLE_WORLD_ENABLE_BATCHING can be enabled
+ * that the expected data is delivered. BLE_WORLD_ENABLE_BATCHING can be defined
  * to test batching and flushing if the nanoapp has the
  * CHRE_BLE_CAPABILITIES_SCAN_RESULT_BATCHING capability. This will configure
  * the BLE scans with a batch window and periodically make flush requests to get
@@ -35,10 +36,9 @@ namespace chre {
 namespace {
 #endif  // CHRE_NANOAPP_INTERNAL
 
-constexpr int8_t kDataTypeServiceData = 0x16;
+using chre::ble_constants::kNumScanFilters;
 
-//! Set this environment variable to true to test BLE scan batching.
-#define BLE_WORLD_ENABLE_BATCHING false
+constexpr int8_t kDataTypeServiceData = 0x16;
 
 #ifdef BLE_WORLD_ENABLE_BATCHING
 //! A timer handle to request the BLE flush.
@@ -56,30 +56,11 @@ uint64_t gEnableDisablePeriodNs = 10 * chre::kOneSecondInNanoseconds;
 //! True if BLE scans are currently enabled
 bool gBleEnabled = false;
 
-chreBleGenericFilter createBleGenericFilter(uint8_t type, uint8_t len,
-                                            uint8_t *data, uint8_t *mask) {
-  chreBleGenericFilter filter;
-  memset(&filter, 0, sizeof(filter));
-  filter.type = type;
-  filter.len = len;
-  memcpy(filter.data, data, sizeof(uint8_t) * len);
-  memcpy(filter.dataMask, mask, sizeof(uint8_t) * len);
-  return filter;
-}
-
 bool enableBleScans() {
-  chreBleGenericFilter scanFilters[2];
-  uint8_t mask[2] = {0xFF, 0xFF};
-  // Google eddystone UUID.
-  uint8_t uuid1[2] = {0xFE, 0xAA};
-  scanFilters[0] = createBleGenericFilter(
-      CHRE_BLE_AD_TYPE_SERVICE_DATA_WITH_UUID_16, 2, uuid1, mask);
-  // Google nearby fastpair UUID.
-  uint8_t uuid2[2] = {0xFE, 0x2C};
-  scanFilters[1] = createBleGenericFilter(
-      CHRE_BLE_AD_TYPE_SERVICE_DATA_WITH_UUID_16, 2, uuid2, mask);
-  const struct chreBleScanFilter filter = {
-      .rssiThreshold = -128, .scanFilterCount = 2, .scanFilters = scanFilters};
+  struct chreBleScanFilter filter;
+  chreBleGenericFilter genericFilters[kNumScanFilters];
+  chre::createBleScanFilterForKnownBeacons(filter, genericFilters,
+                                           kNumScanFilters);
   return chreBleStartScanAsync(CHRE_BLE_SCAN_MODE_BACKGROUND,
                                gBleBatchDurationMs, &filter);
 }
@@ -227,9 +208,11 @@ void nanoappEnd() {
   if (!chreTimerCancel(gEnableDisableTimerHandle)) {
     LOGE("Error canceling BLE scan timer");
   }
+#ifdef BLE_WORLD_ENABLE_BATCHING
   if (!chreTimerCancel(gFlushTimerHandle)) {
     LOGE("Error canceling BLE flush timer");
   }
+#endif
   LOGI("nanoapp stopped");
 }
 

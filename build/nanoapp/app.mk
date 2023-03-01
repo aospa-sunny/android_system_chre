@@ -95,6 +95,7 @@ endif
 # Common Compiler Flags ########################################################
 
 # Add the CHRE API to the include search path.
+COMMON_CFLAGS += -I$(CHRE_PREFIX)/chre_api/include
 COMMON_CFLAGS += -I$(CHRE_PREFIX)/chre_api/include/chre_api
 
 # Don't pull in the utils folder if not desired
@@ -163,6 +164,7 @@ GOOGLE_X86_LINUX_CFLAGS += $(DSO_SUPPORT_LIB_CFLAGS)
 # Makefile Includes ############################################################
 
 # Standard library overrides include
+CHRE_STD_OVERRIDES_ALLOWED ?= true
 include $(CHRE_PREFIX)/std_overrides/std_overrides.mk
 
 # Common includes

@@ -34,6 +34,9 @@ SLPI_CFLAGS += -Iplatform/slpi/include
 # We use FlatBuffers in the SLPI platform layer
 SLPI_CFLAGS += $(FLATBUFFERS_CFLAGS)
 
+# SLPI still uses static event loop as oppose to heap based dynamic event loop
+SLPI_CFLAGS += -DCHRE_STATIC_EVENT_LOOP
+
 # SLPI/SEE-specific Compiler Flags #############################################
 
 # Include paths.
@@ -108,6 +111,7 @@ SLPI_SRCS += platform/shared/pal_system_api.cc
 SLPI_SRCS += platform/shared/platform_debug_dump_manager.cc
 SLPI_SRCS += platform/shared/pw_tokenized_log.cc
 SLPI_SRCS += platform/shared/system_time.cc
+SLPI_SRCS += platform/shared/tracing.cc
 SLPI_SRCS += platform/shared/version.cc
 SLPI_SRCS += platform/slpi/chre_api_re.cc
 SLPI_SRCS += platform/slpi/fatal_error.cc
@@ -208,6 +212,8 @@ SIM_SRCS += platform/linux/power_control_manager.cc
 SIM_SRCS += platform/linux/system_time.cc
 SIM_SRCS += platform/linux/system_timer.cc
 SIM_SRCS += platform/linux/platform_nanoapp.cc
+SIM_SRCS += platform/linux/task_util/task.cc
+SIM_SRCS += platform/linux/task_util/task_manager.cc
 SIM_SRCS += platform/shared/chre_api_audio.cc
 SIM_SRCS += platform/shared/chre_api_ble.cc
 SIM_SRCS += platform/shared/chre_api_core.cc
@@ -222,6 +228,7 @@ SIM_SRCS += platform/shared/memory_manager.cc
 SIM_SRCS += platform/shared/nanoapp/nanoapp_dso_util.cc
 SIM_SRCS += platform/shared/pal_system_api.cc
 SIM_SRCS += platform/shared/system_time.cc
+SIM_SRCS += platform/shared/tracing.cc
 SIM_SRCS += platform/shared/version.cc
 
 # Optional audio support.
@@ -273,6 +280,8 @@ GOOGLE_X86_LINUX_CFLAGS += -Iplatform/linux/include
 
 GOOGLE_X86_LINUX_SRCS += platform/linux/init.cc
 GOOGLE_X86_LINUX_SRCS += platform/linux/assert.cc
+GOOGLE_X86_LINUX_SRCS += platform/linux/task_util/task.cc
+GOOGLE_X86_LINUX_SRCS += platform/linux/task_util/task_manager.cc
 
 # Optional audio support.
 ifeq ($(CHRE_AUDIO_SUPPORT_ENABLED), true)
@@ -339,6 +348,8 @@ GOOGLETEST_CFLAGS += -Iplatform/slpi/include
 GOOGLETEST_COMMON_SRCS += platform/linux/assert.cc
 GOOGLETEST_COMMON_SRCS += platform/linux/sim/audio_source.cc
 GOOGLETEST_COMMON_SRCS += platform/linux/sim/platform_audio.cc
+GOOGLETEST_COMMON_SRCS += platform/linux/tests/task_test.cc
+GOOGLETEST_COMMON_SRCS += platform/linux/tests/task_manager_test.cc
 GOOGLETEST_COMMON_SRCS += platform/tests/log_buffer_test.cc
 GOOGLETEST_COMMON_SRCS += platform/shared/log_buffer.cc
 ifeq ($(CHRE_WIFI_NAN_SUPPORT_ENABLED), true)
@@ -380,6 +391,7 @@ EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/pal_system_api.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/pal_sensor_stub.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/platform_debug_dump_manager.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/system_time.cc
+EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/tracing.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/version.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp/nanoapp_dso_util.cc
 EMBOS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp_loader.cc
@@ -422,6 +434,7 @@ ARM_CFLAGS += -I$(CHRE_PREFIX)/platform/arm/include
 
 # Tinysys sources
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/authentication.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/chre_api_re.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/chre_init.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/condition_variable_base.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/host_cpu_update.cc
@@ -459,6 +472,7 @@ TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/pal_system_api.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/platform_debug_dump_manager.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp_loader.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/system_time.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/tracing.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/version.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/shared/nanoapp/nanoapp_dso_util.cc
 

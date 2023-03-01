@@ -412,7 +412,7 @@ static void chppWifiClientNotifyMatch(void *clientContext) {
 static void chppWiFiRecoverScanMonitor(
     struct ChppWifiClientState *clientContext) {
   if (clientContext->scanMonitorEnabled) {
-    CHPP_LOGI("Re-enabling WiFi scan monitoring after reset");
+    CHPP_LOGD("Re-enabling WiFi scan monitoring after reset");
     clientContext->scanMonitorEnabled = false;
     clientContext->scanMonitorSilenceCallback = true;
 
@@ -558,7 +558,6 @@ static void chppWifiRequestRangingResult(
   struct ChppAppHeader *rxHeader = (struct ChppAppHeader *)buf;
 
   if (rxHeader->error != CHPP_APP_ERROR_NONE) {
-    CHPP_LOGE("Ranging failed at service" PRIu8);
     gCallbacks->rangingEventCallback(chppAppErrorToChreError(rxHeader->error),
                                      NULL);
 

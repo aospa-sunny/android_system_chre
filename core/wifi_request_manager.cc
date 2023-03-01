@@ -34,6 +34,30 @@
 #include "include/chre/core/event_loop_common.h"
 #include "include/chre/core/wifi_request_manager.h"
 
+// The default timeout values can be overwritten to lower the runtime
+// for tests. Timeout values cannot be overwritten with a bigger value.
+#ifdef CHRE_TEST_ASYNC_RESULT_TIMEOUT_NS
+static_assert(CHRE_TEST_ASYNC_RESULT_TIMEOUT_NS <=
+              CHRE_ASYNC_RESULT_TIMEOUT_NS);
+#undef CHRE_ASYNC_RESULT_TIMEOUT_NS
+#define CHRE_ASYNC_RESULT_TIMEOUT_NS CHRE_TEST_ASYNC_RESULT_TIMEOUT_NS
+#endif
+
+#ifdef CHRE_TEST_WIFI_RANGING_RESULT_TIMEOUT_NS
+static_assert(CHRE_TEST_WIFI_RANGING_RESULT_TIMEOUT_NS <=
+              CHRE_WIFI_RANGING_RESULT_TIMEOUT_NS);
+#undef CHRE_WIFI_RANGING_RESULT_TIMEOUT_NS
+#define CHRE_WIFI_RANGING_RESULT_TIMEOUT_NS \
+  CHRE_TEST_WIFI_RANGING_RESULT_TIMEOUT_NS
+#endif
+
+#ifdef CHRE_TEST_WIFI_SCAN_RESULT_TIMEOUT_NS
+static_assert(CHRE_TEST_WIFI_SCAN_RESULT_TIMEOUT_NS <=
+              CHRE_WIFI_SCAN_RESULT_TIMEOUT_NS);
+#undef CHRE_WIFI_SCAN_RESULT_TIMEOUT_NS
+#define CHRE_WIFI_SCAN_RESULT_TIMEOUT_NS CHRE_TEST_WIFI_SCAN_RESULT_TIMEOUT_NS
+#endif
+
 namespace chre {
 
 WifiRequestManager::WifiRequestManager() {
@@ -637,7 +661,7 @@ void WifiRequestManager::handleNanServiceSubscriptionCanceledEvent(
 }
 
 void WifiRequestManager::logStateToBuffer(DebugDumpWrapper &debugDump) const {
-  debugDump.print("\nWifi: scan monitor %s\n",
+  debugDump.print("\nWifi scan monitor %s\n",
                   scanMonitorIsEnabled() ? "enabled" : "disabled");
 
   if (scanMonitorIsEnabled()) {
@@ -667,6 +691,7 @@ void WifiRequestManager::logStateToBuffer(DebugDumpWrapper &debugDump) const {
                   mWifiScanRequestLogs.size());
   static_assert(kNumWifiRequestLogs <= INT8_MAX,
                 "kNumWifiRequestLogs must be <= INT8_MAX");
+
   for (int8_t i = static_cast<int8_t>(mWifiScanRequestLogs.size()) - 1; i >= 0;
        i--) {
     const auto &log = mWifiScanRequestLogs[static_cast<size_t>(i)];
