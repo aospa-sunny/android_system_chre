@@ -44,6 +44,7 @@ using aidl::android::hardware::contexthub::HostEndpointInfo;
 using aidl::android::hardware::contexthub::IContextHub;
 using aidl::android::hardware::contexthub::NanoappBinary;
 using aidl::android::hardware::contexthub::NanoappInfo;
+using aidl::android::hardware::contexthub::NanSessionRequest;
 using aidl::android::hardware::contexthub::Setting;
 using android::chre::NanoAppBinaryHeader;
 using android::chre::readFileContents;
@@ -210,7 +211,8 @@ class ContextHubCallback : public BnContextHubCallback {
     return ScopedAStatus::ok();
   }
 
-  ScopedAStatus handleNanSessionRequest(bool /* enable */) override {
+  ScopedAStatus handleNanSessionRequest(
+      const NanSessionRequest & /* request */) override {
     return ScopedAStatus::ok();
   }
 
@@ -483,7 +485,7 @@ void sendMessageToNanoapp(const std::string &hexHostEndpointId,
   auto status = contextHub->sendMessageToHub(kContextHubId, contextHubMessage);
   verifyStatusAndSignal(/* operation= */ "sending a message to " + appIdOrName,
                         status, gCallback->promise.get_future());
-  onEndpointConnected(hexHostEndpointId);
+  onEndpointDisconnected(hexHostEndpointId);
 }
 
 void changeSetting(const std::string &setting, bool enabled) {

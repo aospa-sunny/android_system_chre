@@ -222,7 +222,12 @@ ScopedAStatus ContextHub::queryNanoapps(int32_t contextHubId) {
 }
 
 ::ndk::ScopedAStatus ContextHub::getPreloadedNanoappIds(
-    std::vector<int64_t> *out_preloadedNanoappIds) {
+    int32_t contextHubId, std::vector<int64_t> *out_preloadedNanoappIds) {
+  if (contextHubId != kDefaultHubId) {
+    LOGE("Invalid ID %" PRId32, contextHubId);
+    return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+  }
+
   if (out_preloadedNanoappIds == nullptr) {
     return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
   }
@@ -331,8 +336,9 @@ ScopedAStatus ContextHub::onHostEndpointDisconnected(
   return ndk::ScopedAStatus::ok();
 }
 
-ScopedAStatus ContextHub::onNanSessionStateChanged(bool /*in_state*/) {
-  // TODO(229888878): Add support for NAN session management.
+ScopedAStatus ContextHub::onNanSessionStateChanged(
+    const NanSessionStateUpdate & /*in_update*/) {
+  // TODO(271471342): Add support for NAN session management.
   return ndk::ScopedAStatus::ok();
 }
 
@@ -501,7 +507,8 @@ ScopedAStatus ContextHub::enableTestMode() {
     LOGE("There exists a pending load transaction. Cannot enable test mode.");
   } else if (!queryNanoappsInternal(kDefaultHubId, &loadedNanoappIds)) {
     LOGE("Could not query nanoapps to enable test mode.");
-  } else if (!getPreloadedNanoappIds(&preloadedNanoappIds).isOk()) {
+  } else if (!getPreloadedNanoappIds(kDefaultHubId, &preloadedNanoappIds)
+                  .isOk()) {
     LOGE("Unable to get preloaded nanoapp IDs from the config file.");
   } else {
     std::sort(loadedNanoappIds.begin(), loadedNanoappIds.end());
