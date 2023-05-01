@@ -26,16 +26,16 @@ using aidl::android::hardware::contexthub::HostEndpointInfo;
 using aidl::android::hardware::contexthub::IContextHubCallback;
 
 namespace {
-std::string getProcessName(pid_t pid) {
-  std::ifstream processNameFile("/proc/" + internal::ToString(pid) +
-                                "/cmdline");
-  std::string processName;
-  processNameFile >> processName;
-  std::replace(processName.begin(), processName.end(), /* old_value= */ '\0',
-               /* new_value= */ ' ');
-  std::vector<std::string> tokens =
-      base::Tokenize(processName, /* delimiters= */ " ");
-  return tokens.front();
+constexpr char kSystemServerName[] = "system_server";
+std::string getProcessName(pid_t /*pid*/) {
+  // TODO(b/274597758): this is a temporary solution that should be updated
+  //   after b/274597758 is resolved.
+  static bool sIsFirstClient = true;
+  if (sIsFirstClient) {
+    sIsFirstClient = false;
+    return kSystemServerName;
+  }
+  return "the_vendor_client";
 }
 
 bool getClientMappingsFromFile(const char *filePath, Json::Value &mappings) {
@@ -142,11 +142,11 @@ void HalClientManager::handleClientDeath(pid_t pid) {
   clientInfo.callback.reset();
   if (mPendingLoadTransaction.has_value() &&
       mPendingLoadTransaction->clientId == clientId) {
-    mPendingLoadTransaction.reset();
+    resetPendingLoadTransaction();
   }
   if (mPendingUnloadTransaction.has_value() &&
       mPendingUnloadTransaction->clientId == clientId) {
-    mPendingUnloadTransaction.reset();
+    resetPendingUnloadTransaction();
   }
   mClientIdsToClientInfo.erase(clientId);
   if (mFrameworkServiceClientId == clientId) {
@@ -196,7 +196,7 @@ HalClientManager::getNextFragmentedLoadRequest(
     return std::nullopt;
   }
   if (mPendingLoadTransaction->transaction->isComplete()) {
-    mPendingLoadTransaction.reset();
+    resetPendingLoadTransaction();
     return std::nullopt;
   }
   auto request = mPendingLoadTransaction->transaction->getNextRequest();
@@ -247,7 +247,7 @@ void HalClientManager::finishPendingUnloadTransaction(HalClientId clientId) {
          mPendingUnloadTransaction->clientId, clientId);
     return;
   }
-  mPendingUnloadTransaction.reset();
+  resetPendingUnloadTransaction();
 }
 
 bool HalClientManager::isNewTransactionAllowedLocked(HalClientId clientId) {
@@ -265,7 +265,7 @@ bool HalClientManager::isNewTransactionAllowedLocked(HalClientId clientId) {
          "'s pending load transaction is overridden by client %" PRIu16
          " after holding the slot for %" PRIu64 " ms",
          mPendingLoadTransaction->clientId, clientId, timeElapsedMs);
-    mPendingLoadTransaction.reset();
+    resetPendingLoadTransaction();
     return true;
   }
   if (mPendingUnloadTransaction.has_value()) {
@@ -282,7 +282,7 @@ bool HalClientManager::isNewTransactionAllowedLocked(HalClientId clientId) {
          " is overridden by a new transaction from client %" PRIu16
          " after holding the slot for %" PRIu64 "ms",
          mPendingUnloadTransaction->clientId, clientId, timeElapsedMs);
-    mPendingUnloadTransaction.reset();
+    resetPendingUnloadTransaction();
     return true;
   }
   return true;
@@ -424,6 +424,10 @@ HalClientManager::HalClientManager() {
     std::string processName = mapping[kJsonProcessName].asString();
     auto clientId = static_cast<HalClientId>(mapping[kJsonClientId].asUInt());
     mProcessNamesToClientIds[processName] = clientId;
+    // mNextClientId should always hold the next available client id
+    if (mNextClientId <= clientId) {
+      mNextClientId = clientId + 1;
+    }
   }
 }
 }  // namespace android::hardware::contexthub::common::implementation

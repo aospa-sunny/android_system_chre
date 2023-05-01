@@ -130,7 +130,8 @@ ScopedAStatus MultiClientContextHubBase::loadNanoapp(
                               (appBinary.targetChreApiMinorVersion << 16);
   auto transaction = std::make_unique<FragmentedLoadTransaction>(
       transactionId, appBinary.nanoappId, appBinary.nanoappVersion,
-      appBinary.flags, targetApiVersion, appBinary.customBinary);
+      appBinary.flags, targetApiVersion, appBinary.customBinary,
+      mConnection->getLoadFragmentSizeBytes());
   if (!mHalClientManager->registerPendingLoadTransaction(
           std::move(transaction))) {
     return fromResult(false);
@@ -140,9 +141,13 @@ ScopedAStatus MultiClientContextHubBase::loadNanoapp(
       clientId, transactionId, std::nullopt);
   if (!request.has_value()) {
     LOGE("Failed to get the first load request.");
+    mHalClientManager->resetPendingLoadTransaction();
     return fromResult(false);
   }
   bool result = sendFragmentedLoadRequest(clientId, request.value());
+  if (!result) {
+    mHalClientManager->resetPendingLoadTransaction();
+  }
   return fromResult(result);
 }
 
@@ -173,6 +178,9 @@ ScopedAStatus MultiClientContextHubBase::unloadNanoapp(int32_t contextHubId,
                                        builder.GetSize(),
                                        mHalClientManager->getClientId());
   bool result = mConnection->sendMessage(builder);
+  if (!result) {
+    mHalClientManager->resetPendingUnloadTransaction();
+  }
   return fromResult(result);
 }
 
@@ -313,7 +321,7 @@ ScopedAStatus MultiClientContextHubBase::onHostEndpointConnected(
       type = CHRE_HOST_ENDPOINT_TYPE_FRAMEWORK;
       break;
     default:
-      LOGE("Unsupported host endpoint type %" PRIu32, type);
+      LOGE("Unsupported host endpoint type %" PRIu32, info.type);
       return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
   }
 

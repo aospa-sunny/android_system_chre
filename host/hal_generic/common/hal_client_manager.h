@@ -122,6 +122,10 @@ class HalClientManager {
   bool registerPendingLoadTransaction(
       std::unique_ptr<chre::FragmentedLoadTransaction> transaction);
 
+  void resetPendingLoadTransaction() {
+    mPendingLoadTransaction.reset();
+  }
+
   /**
    * Gets the next FragmentedLoadRequest from PendingLoadTransaction if it's
    * available.
@@ -149,6 +153,10 @@ class HalClientManager {
    * @return true if success, otherwise false.
    */
   bool registerPendingUnloadTransaction();
+
+  void resetPendingUnloadTransaction() {
+    mPendingUnloadTransaction.reset();
+  }
 
   /**
    * Clears the PendingUnloadTransaction registered by clientId after the
@@ -207,11 +215,10 @@ class HalClientManager {
 
  protected:
   static constexpr char kClientMappingFilePath[] =
-      "/data/vendor/chre_hal_clients.json";
+      "/data/vendor/chre/chre_hal_clients.json";
   static constexpr char kJsonClientId[] = "ClientId";
   static constexpr char kJsonProcessName[] = "ProcessName";
   static constexpr int64_t kTransactionTimeoutThresholdMs = 5000;  // 5 seconds
-  static constexpr char kSystemServerName[] = "system_server";
   static constexpr uint8_t kNumOfBitsForEndpointId = 6;
   static constexpr HostEndpointId kMaxVendorEndpointId =
       (1 << kNumOfBitsForEndpointId) - 1;
