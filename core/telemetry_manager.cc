@@ -24,7 +24,7 @@
 #include "chre/util/macros.h"
 #include "chre/util/nested_data_ptr.h"
 #include "chre/util/time.h"
-#include "pixelatoms.nanopb.h"
+#include "core/chre_metrics.nanopb.h"
 
 namespace chre {
 
@@ -42,11 +42,15 @@ namespace {
   _android_hardware_google_pixel_PixelAtoms_ChrePalType:: \
       android_hardware_google_pixel_PixelAtoms_ChrePalType_CHRE_PAL_TYPE_##x
 
+// These IDs must be kept in sync with
+// hardware/google/pixel/pixelstats/pixelatoms.proto.
+constexpr uint32_t kEventQueueSnapshotReportedId = 105035;
+constexpr uint32_t kPalOpenedFailedId = 105032;
+
 void sendMetricToHost(uint32_t atomId, const pb_field_t fields[],
                       const void *data) {
   size_t size;
-  if (!pb_get_encoded_size(&size, PIXELATOMS_GET(ChrePalOpenFailed_fields),
-                           data)) {
+  if (!pb_get_encoded_size(&size, fields, data)) {
     LOGE("Failed to get message size");
   } else {
     pb_byte_t *bytes = static_cast<pb_byte_t *>(memoryAlloc(size));
@@ -54,13 +58,12 @@ void sendMetricToHost(uint32_t atomId, const pb_field_t fields[],
       LOG_OOM();
     } else {
       pb_ostream_t stream = pb_ostream_from_buffer(bytes, size);
-      if (!pb_encode(&stream, PIXELATOMS_GET(ChrePalOpenFailed_fields), data)) {
+      if (!pb_encode(&stream, fields, data)) {
         LOGE("Failed to metric error %s", PB_GET_ERROR(&stream));
       } else {
         HostCommsManager &manager =
             EventLoopManagerSingleton::get()->getHostCommsManager();
-        if (!manager.sendMetricLog(
-                PIXELATOMS_GET(Atom_chre_pal_open_failed_tag), bytes, size)) {
+        if (!manager.sendMetricLog(atomId, bytes, size)) {
           LOGE("Failed to send metric message");
         }
       }
@@ -80,8 +83,8 @@ void sendPalOpenFailedMetric(
       .type = _android_hardware_google_pixel_PixelAtoms_ChrePalOpenFailed_Type::
       android_hardware_google_pixel_PixelAtoms_ChrePalOpenFailed_Type_INITIAL_OPEN;
 
-  sendMetricToHost(PIXELATOMS_GET(Atom_chre_pal_open_failed_tag),
-                   PIXELATOMS_GET(ChrePalOpenFailed_fields), &result);
+  sendMetricToHost(kPalOpenedFailedId, CHREATOMS_GET(ChrePalOpenFailed_fields),
+                   &result);
 }
 
 void sendEventLoopStats(uint32_t maxQueueSize, uint32_t meanQueueSize,
@@ -99,8 +102,8 @@ void sendEventLoopStats(uint32_t maxQueueSize, uint32_t meanQueueSize,
   result.has_num_dropped_events = true;
   result.num_dropped_events = numDroppedEvents;
 
-  sendMetricToHost(PIXELATOMS_GET(Atom_chre_event_queue_snapshot_reported_tag),
-                   PIXELATOMS_GET(ChreEventQueueSnapshotReported_fields),
+  sendMetricToHost(kEventQueueSnapshotReportedId,
+                   CHREATOMS_GET(ChreEventQueueSnapshotReported_fields),
                    &result);
 }
 
@@ -160,7 +163,7 @@ void TelemetryManager::collectSystemMetrics() {
 }
 
 void TelemetryManager::scheduleMetricTimer() {
-  constexpr Seconds kDelay = Seconds(60 * 60 * 24);  // 24 hours
+  constexpr Seconds kDelay = Seconds(kOneDayInSeconds);
   auto callback = [](uint16_t /* eventType */, void * /* data */,
                      void * /* extraData */) {
     EventLoopManagerSingleton::get()
